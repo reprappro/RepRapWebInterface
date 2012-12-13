@@ -34,6 +34,35 @@ char line[1000];
 char page[1000];
 int lp;
 
+void setup()
+{
+  lp = 0;
+  for(int i=0; i < MAX_FILES; i++)
+    inUse[i] = false;
+    
+  Serial.begin(9600);
+
+  pinMode(10, OUTPUT);
+  digitalWrite(10,LOW);   
+
+  Ethernet.begin(mac, ip);
+  server.begin();
+  
+  Serial.print("server is at ");
+  Serial.println(Ethernet.localIP());
+  
+  digitalWrite(10,HIGH);
+ 
+  if (!SD.begin(4)) 
+     Serial.println("SD initialization failed.");
+    
+  digitalWrite(10,LOW); 
+     
+  Serial.print("server is (still?) at ");
+  Serial.println(Ethernet.localIP());    
+     
+}
+
 void error(char* s)
 {
   Serial.println(s); 
@@ -87,38 +116,12 @@ void Close(int file)
     inUse[file] = false;
 }
 
-int Read(int file)
+bool Read(int file, unsigned char* b)
 {
   if(!files[file].available())
-    return -1;
-  return files[file].read();
-}
-
-void setup()
-{
-  lp = 0;
-  for(int i=0; i < MAX_FILES; i++)
-    inUse[i] = false;
-
-  pinMode(10, OUTPUT);
-  digitalWrite(10,LOW);
-
-    
- // Open serial communications and wait for port to open:
-  Serial.begin(9600);
-   while (!Serial) {
-    ; // wait for serial port to connect. Needed for Leonardo only
-  }
- // start the Ethernet connection and the server:
-
-  Ethernet.begin(mac, ip);
-  server.begin();
-  
-  comment("server is at ");
-  Serial.println(Ethernet.localIP());
- 
-  if (!SD.begin(4)) 
-     error("SD initialization failed.");  
+    return false;
+  *b = (unsigned char) files[file].read();
+  return true;
 }
 
 
@@ -167,8 +170,8 @@ void loop()
           client.println();
       
           htmlFile = OpenFile(page,false);
-          int b;
-          while( (b = Read(htmlFile)) >= 0)
+          unsigned char b;
+          while(Read(htmlFile, &b))
             client.write(b);
           Close(htmlFile);
           
